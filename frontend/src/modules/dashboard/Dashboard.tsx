@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { useLanguage } from '@/content/LanguageContext'
@@ -6,7 +6,7 @@ import { fetchUserDashboard, fetchJobSites, fetchPopularCountries } from '../../
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ExternalLink, MapPin, Briefcase, Globe, Star, ChevronRight, Copy, Check, Loader2 } from 'lucide-react'
+import { ExternalLink, MapPin, Briefcase, Globe, Star, ChevronRight, Copy, Check } from 'lucide-react'
 import { getCountryFlag } from '@/lib/countryFlags'
 
 interface JobSite { 
@@ -54,7 +54,6 @@ export default function Dashboard() {
           setCountry(dashboardRes.country || '')
           setSites(dashboardRes.job_sites || [])
           // Payment check is handled by UserGuard - if we reach here, payment is complete
-          setNeedsPayment(false)
         }
 
         // Fetch popular countries
