@@ -190,72 +190,90 @@ def confirm_payment(request):
             try:
                 amount = payment.amount
                 print(f"  Calling update_subscription with amount: {amount}")
-                
+
                 months_added = dashboard.update_subscription(amount, monthly_price=500)
-                
+
                 # Mark payment as processed
                 payment.subscription_updated = True
                 payment.save()
                 print(f"  Marked payment as processed (subscription_updated=True)")
-                
+
                 # Refresh after update_subscription
                 dashboard.refresh_from_db()
                 print(f"  After update_subscription: months_added={months_added}")
                 print(f"  Result: status={dashboard.subscription_status}, end_date={dashboard.subscription_end_date}")
                 print(f"  Result: total_paid={dashboard.total_paid}, months_subscribed={dashboard.months_subscribed}, is_verified={dashboard.is_verified}")
-                
+
             except Exception as e:
                 print(f"Error in update_subscription: {e}")
                 import traceback
                 traceback.print_exc()
-                
+
                 # Fallback - directly set all fields without calling update_subscription
                 from decimal import Decimal
                 amount = Decimal(str(payment.amount)) if payment else Decimal('500.00')
-                
+
                 dashboard.total_paid = Decimal(str(dashboard.total_paid)) + amount
                 dashboard.months_subscribed += 1
                 dashboard.subscription_status = 'active'
                 dashboard.is_verified = True
-                
+
                 if not dashboard.subscription_end_date or dashboard.subscription_end_date < timezone.now().date():
                     dashboard.subscription_end_date = timezone.now().date() + timedelta(days=30)
                 else:
                     dashboard.subscription_end_date = dashboard.subscription_end_date + timedelta(days=30)
-                
+
                 dashboard.save()
-                
+
                 # Mark payment as processed even in fallback
                 payment.subscription_updated = True
                 payment.save()
-                
+
                 print(f"Used fallback to activate subscription for user {user.username}")
                 print(f"Fallback result: status={dashboard.subscription_status}, end_date={dashboard.subscription_end_date}")
-        else:
-            print(f"  Payment already processed (subscription_updated=True), skipping update")
-            # Ensure subscription is active anyway
-            if dashboard.subscription_status != 'active':
+        elif payment and payment.subscription_updated:
+            print(f"  Payment already processed (subscription_updated=True)")
+            # Ensure subscription is active anyway - might have been reset somehow
+            dashboard.refresh_from_db()
+            if dashboard.subscription_status != 'active' or not dashboard.is_verified:
+                print(f"  Payment processed but subscription not active, fixing...")
                 dashboard.subscription_status = 'active'
                 dashboard.is_verified = True
                 if not dashboard.subscription_end_date:
                     dashboard.subscription_end_date = timezone.now().date() + timedelta(days=30)
                 dashboard.save()
+                dashboard.refresh_from_db()
                 print(f"  Fixed subscription status to active")
+        else:
+            print(f"  No payment found to process")
         
         # Ensure is_verified is set
         if not dashboard.is_verified:
             dashboard.is_verified = True
             dashboard.save()
-        
+
+        # Final refresh to get the absolute latest state
+        dashboard.refresh_from_db()
+        print(f"Final state before response:")
+        print(f"  - subscription_status: {dashboard.subscription_status}")
+        print(f"  - subscription_end_date: {dashboard.subscription_end_date}")
+        print(f"  - is_verified: {dashboard.is_verified}")
+        print(f"  - total_paid: {dashboard.total_paid}")
+        print(f"  - months_subscribed: {dashboard.months_subscribed}")
+
         # Generate JWT tokens for auto-login
         refresh = RefreshToken.for_user(user)
-        
+
         return Response({
+            'ok': True,
             'status': 'success',
             'message': 'Payment confirmed',
             'access': str(refresh.access_token),
             'refresh': str(refresh),
             'token': str(refresh.access_token),  # For backward compatibility
+            'subscription_status': dashboard.subscription_status,
+            'subscription_end_date': str(dashboard.subscription_end_date) if dashboard.subscription_end_date else None,
+            'is_verified': dashboard.is_verified,
             'user': {
                 'id': user.id,
                 'username': user.username,

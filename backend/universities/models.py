@@ -142,9 +142,13 @@ class UserDashboard(models.Model):
             self.save()
             print(f"  SAVED: status={self.subscription_status}, end_date={self.subscription_end_date}")
             print(f"  SAVED: total_paid={self.total_paid}, months_subscribed={self.months_subscribed}, is_verified={self.is_verified}")
+
+            # Verify the save was successful by refreshing from DB
+            self.refresh_from_db()
+            print(f"  VERIFIED after refresh: status={self.subscription_status}, end_date={self.subscription_end_date}, is_verified={self.is_verified}")
         else:
             print(f"  WARNING: amount_paid is not positive ({amount_paid}), skipping update")
-        
+
         return months_to_add
 
     def __str__(self):
