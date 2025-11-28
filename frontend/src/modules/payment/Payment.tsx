@@ -1,16 +1,15 @@
-import React, { useState, useEffect } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { initiatePayment, fetchUserDashboard } from '../../services/api'
 import { useAuth } from '../auth/AuthContext'
 import { getAccessToken } from '../../services/auth'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { CheckCircle, CreditCard, Shield, Zap, Loader2 } from 'lucide-react'
+import { CheckCircle, CreditCard, Shield, Loader2 } from 'lucide-react'
 
 export default function Payment() {
   const location = useLocation() as any
-  const navigate = useNavigate()
   const { user } = useAuth()
   const { draftId: stateDraftId, email: stateEmail, needsPayment } = (location.state || {}) as { 
     draftId?: string; 
