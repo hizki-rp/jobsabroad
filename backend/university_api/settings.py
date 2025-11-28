@@ -66,8 +66,8 @@ if not DEBUG:
 
 # allow frontend to access backend
 # Get CORS origins from environment variable, fallback to defaults
-CORS_ORIGINS_STR = os.environ.get('CORS_ALLOWED_ORIGINS', 
-    'http://localhost:5174,http://localhost:5173,http://localhost:4173,https://jobsabroad.onrender.com')
+CORS_ORIGINS_STR = os.environ.get('CORS_ALLOWED_ORIGINS',
+    'http://localhost:5174,http://localhost:5173,http://localhost:4173,https://jobsabroad.onrender.com,https://jobsabroad.vercel.app')
 CORS_ALLOWED_ORIGINS = [origin.strip() for origin in CORS_ORIGINS_STR.split(',') if origin.strip()]
 
 # For development/production, allow all origins if set in environment
