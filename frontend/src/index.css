@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: 0 0% 100%;
+  --color-foreground: 222.2 84% 4.9%;
+  --color-card: 0 0% 100%;
+  --color-card-foreground: 222.2 84% 4.9%;
+  --color-popover: 0 0% 100%;
+  --color-popover-foreground: 222.2 84% 4.9%;
+  /* Vibrant Blue from logo - primary brand color */
+  --color-primary: 217 91% 60%;
+  --color-primary-foreground: 0 0% 100%;
+  /* Pastel blue for backgrounds */
+  --color-secondary: 210 100% 95%;
+  --color-secondary-foreground: 217 91% 50%;
+  /* Complementary orange for accents */
+  --color-accent: 25 95% 53%;
+  --color-accent-foreground: 0 0% 100%;
+  --color-muted: 210 40% 96%;
+  --color-muted-foreground: 215.4 16.3% 46.9%;
+  --color-destructive: 0 84.2% 60.2%;
+  --color-destructive-foreground: 210 40% 98%;
+  --color-border: 214.3 31.8% 91.4%;
+  --color-input: 214.3 31.8% 91.4%;
+  --color-ring: 217 91% 60%;
+  --radius: 0.75rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  @theme {
+    --color-background: 222.2 84% 4.9%;
+    --color-foreground: 210 40% 98%;
+    --color-card: 222.2 84% 4.9%;
+    --color-card-foreground: 210 40% 98%;
+    --color-popover: 222.2 84% 4.9%;
+    --color-popover-foreground: 210 40% 98%;
+    --color-primary: 217.2 91.2% 59.8%;
+    --color-primary-foreground: 222.2 84% 4.9%;
+    --color-secondary: 217.2 32.6% 17.5%;
+    --color-secondary-foreground: 210 40% 98%;
+    --color-muted: 217.2 32.6% 17.5%;
+    --color-muted-foreground: 215 20.2% 65.1%;
+    --color-accent: 217.2 32.6% 17.5%;
+    --color-accent-foreground: 210 40% 98%;
+    --color-destructive: 0 62.8% 30.6%;
+    --color-destructive-foreground: 210 40% 98%;
+    --color-border: 217.2 32.6% 17.5%;
+    --color-input: 217.2 32.6% 17.5%;
+    --color-ring: 224.3 76.3% 94.1%;
+  }
+}
+
+@layer base {
+  * {
+    border-color: theme(colors.border);
+  }
+  body {
+    background-color: theme(colors.background);
+    color: theme(colors.foreground);
+  }
+}
+
+@layer utilities {
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-20px);
+    }
+  }
+  
+  @keyframes pulse-slow {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+  
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  .animate-pulse-slow {
+    animation: pulse-slow 4s ease-in-out infinite;
+  }
+  
+  .delay-1000 {
+    animation-delay: 1s;
+  }
+}
