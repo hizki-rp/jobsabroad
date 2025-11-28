@@ -603,20 +603,24 @@ class InitializeChapaPaymentView(APIView):
         print(f"DEBUG: Webhook URL being sent to Chapa: {callback_url}")
 
         # Ensure no double slashes in the return URL and use an environment variable.
-        frontend_base_url = os.environ.get("FRONTEND_URL", "http://localhost:5173").rstrip('/')
+        frontend_base_url_from_env = os.environ.get("FRONTEND_URL", "http://localhost:5173").rstrip('/')
+        print(f"DEBUG: FRONTEND_URL from environment: {frontend_base_url_from_env}")
+        print(f"DEBUG: BACKEND_URL: {backend_base_url}")
 
         # Always use Vercel URL in production (when backend is on Render)
         # This ensures payment redirects go to the correct frontend deployment
         if 'render.com' in backend_base_url or 'onrender.com' in backend_base_url:
             # Production environment - use Vercel frontend
             frontend_base_url = "https://jobsabroad.vercel.app"
-            print(f"DEBUG: Production environment detected, using Vercel frontend: {frontend_base_url}")
-        elif 'localhost' not in frontend_base_url:
-            # If FRONTEND_URL is set to something other than localhost but not in production, trust it
-            print(f"DEBUG: Using FRONTEND_URL from environment: {frontend_base_url}")
+            print(f"DEBUG: Production environment detected (backend on Render), forcing Vercel frontend: {frontend_base_url}")
+        elif 'localhost' not in frontend_base_url_from_env:
+            # If FRONTEND_URL is set to something other than localhost, trust it
+            frontend_base_url = frontend_base_url_from_env
+            print(f"DEBUG: Using custom FRONTEND_URL from environment: {frontend_base_url}")
         else:
             # Local development
-            print(f"DEBUG: Local development, using: {frontend_base_url}")
+            frontend_base_url = frontend_base_url_from_env
+            print(f"DEBUG: Local development detected, using: {frontend_base_url}")
         
         # Check if user already has a pending payment to prevent duplicates
         # Skip recent payment check for now to avoid errors
@@ -642,9 +646,11 @@ class InitializeChapaPaymentView(APIView):
         if dashboard.subscription_status == 'expired' or not dashboard.subscription_end_date:
             # New user or expired subscription - redirect to payment success
             return_url = frontend_base_url + "/payment-success"
+            print(f"DEBUG: New/expired user - return URL set to: {return_url}")
         else:
             # Existing subscriber - redirect to dashboard
             return_url = frontend_base_url + "/dashboard"
+            print(f"DEBUG: Existing subscriber - return URL set to: {return_url}")
         payload = {
             "amount": amount,
             "currency": "ETB",
