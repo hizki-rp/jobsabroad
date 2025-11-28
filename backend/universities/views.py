@@ -407,7 +407,16 @@ class DashboardView(APIView):
                 dashboard.subscription_end_date = timezone.now().date() + timedelta(days=30)
             dashboard.save()
             print(f"  - Fixed subscription status to active")
-        
+
+        # Final refresh to ensure we have the latest state
+        dashboard.refresh_from_db()
+        print(f"Dashboard final state for user {request.user.username}:")
+        print(f"  - subscription_status: {dashboard.subscription_status}")
+        print(f"  - subscription_end_date: {dashboard.subscription_end_date}")
+        print(f"  - is_verified: {dashboard.is_verified}")
+        print(f"  - total_paid: {dashboard.total_paid}")
+        print(f"  - months_subscribed: {dashboard.months_subscribed}")
+
         serializer = UserDashboardSerializer(dashboard)
         response_data = serializer.data
         
@@ -862,14 +871,14 @@ class PaymentWebhookView(APIView):
                 
                 return Response({'status': 'already processed'}, status=status.HTTP_200_OK)
             
-            # Create payment with subscription_updated=True since we'll update it now
+            # Create payment with subscription_updated=False - will set to True after successful update
             payment = Payment.objects.create(
                 user=user,
                 amount=500.00,
                 tx_ref=tx_ref,
                 status='success',
                 chapa_reference=webhook_data.get('reference', ''),
-                subscription_updated=True  # Mark as processed immediately
+                subscription_updated=False  # Will mark as True after update_subscription succeeds
             )
             
             # 5. Process payment and update subscription
@@ -884,18 +893,23 @@ class PaymentWebhookView(APIView):
             # Process payment with update_subscription
             try:
                 months_added = dashboard.update_subscription(500.00, monthly_price=500)
-                
+
+                # Mark payment as processed after successful update
+                payment.subscription_updated = True
+                payment.save()
+                print(f"  - Marked payment as processed (subscription_updated=True)")
+
                 # Refresh after update_subscription to get latest state
                 dashboard.refresh_from_db()
                 print(f"  - After update_subscription: months_added={months_added}")
                 print(f"  - Result: status={dashboard.subscription_status}, end_date={dashboard.subscription_end_date}")
                 print(f"  - Result: total_paid={dashboard.total_paid}, months_subscribed={dashboard.months_subscribed}, is_verified={dashboard.is_verified}")
-                
+
             except Exception as e:
                 print(f"Error updating subscription: {e}")
                 import traceback
                 traceback.print_exc()
-                
+
                 # Fallback - directly set fields
                 from decimal import Decimal
                 dashboard.total_paid = Decimal(str(dashboard.total_paid)) + Decimal('500.00')
@@ -907,6 +921,11 @@ class PaymentWebhookView(APIView):
                 else:
                     dashboard.subscription_end_date = dashboard.subscription_end_date + timedelta(days=30)
                 dashboard.save()
+
+                # Mark payment as processed even in fallback
+                payment.subscription_updated = True
+                payment.save()
+
                 print(f"Used fallback to activate subscription for user {user.username}")
 
             print(f"Successfully processed payment for user {user.id}. New expiry: {dashboard.subscription_end_date}")
