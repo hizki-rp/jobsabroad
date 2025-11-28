@@ -606,7 +606,7 @@ class InitializeChapaPaymentView(APIView):
         frontend_base_url = os.environ.get("FRONTEND_URL", "http://localhost:5173").rstrip('/')
         # Override for production if using localhost
         if 'localhost' in frontend_base_url and 'render.com' in backend_base_url:
-            frontend_base_url = "https://addistemari.com"
+            frontend_base_url = "https://jobsabroad.vercel.app"
         
         # Check if user already has a pending payment to prevent duplicates
         # Skip recent payment check for now to avoid errors
