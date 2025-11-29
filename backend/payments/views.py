@@ -330,3 +330,86 @@ def todays_payments(request):
         'total_amount': str(total_today),
         'payments': payment_data
     })
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def force_subscription_update(request):
+    """Force subscription update for authenticated user - fallback if webhook/confirmation fails"""
+    from rest_framework_simplejwt.authentication import JWTAuthentication
+    from universities.models import UserDashboard
+
+    # Try to get user from token
+    jwt_auth = JWTAuthentication()
+    try:
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+        if auth_header.startswith('Bearer '):
+            token = auth_header.replace('Bearer ', '')
+        else:
+            token = auth_header
+        validated_token = jwt_auth.get_validated_token(token)
+        user = jwt_auth.get_user(validated_token)
+    except:
+        return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    print(f"=== FORCE SUBSCRIPTION UPDATE for {user.email} ===")
+
+    # Find successful payment for this user
+    successful_payment = Payment.objects.filter(
+        user=user,
+        status='success'
+    ).order_by('-payment_date').first()
+
+    if not successful_payment:
+        print(f"  No successful payment found for {user.email}")
+        return Response({
+            'error': 'No successful payment found',
+            'message': 'Please complete payment first'
+        }, status=status.HTTP_404_NOT_FOUND)
+
+    print(f"  Found payment: {successful_payment.tx_ref}, amount: {successful_payment.amount}")
+    print(f"  Payment already processed: {successful_payment.subscription_updated}")
+
+    # Get or create dashboard
+    dashboard, created = UserDashboard.objects.get_or_create(user=user)
+    if created:
+        print(f"  Created new dashboard for {user.email}")
+
+    dashboard.refresh_from_db()
+    print(f"  Current status: {dashboard.subscription_status}, verified: {dashboard.is_verified}")
+
+    # Update subscription even if already processed (force update)
+    try:
+        from decimal import Decimal
+        months_added = dashboard.update_subscription(
+            Decimal(str(successful_payment.amount)),
+            monthly_price=Decimal('500')
+        )
+
+        # Mark payment as processed
+        successful_payment.subscription_updated = True
+        successful_payment.save()
+
+        # Refresh dashboard
+        dashboard.refresh_from_db()
+
+        print(f"  Updated successfully!")
+        print(f"  New status: {dashboard.subscription_status}")
+        print(f"  End date: {dashboard.subscription_end_date}")
+        print(f"  Verified: {dashboard.is_verified}")
+
+        return Response({
+            'success': True,
+            'message': 'Subscription updated successfully',
+            'subscription_status': dashboard.subscription_status,
+            'subscription_end_date': str(dashboard.subscription_end_date) if dashboard.subscription_end_date else None,
+            'is_verified': dashboard.is_verified,
+            'months_added': months_added
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        print(f"  ERROR: {e}")
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'error': 'Failed to update subscription',
+            'message': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
